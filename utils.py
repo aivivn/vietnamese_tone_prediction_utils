@@ -107,7 +107,8 @@ def remove_tone_file(in_path, out_path):
             out_file.write(no_tone_line)
 
 
-def normalize_tone_file(in_path, out_path):
+def convert_to_submission_file(in_path, out_path):
+    assert out_path.endswith('.csv'), 'out_path needs to be a csv file, got {}'.format(out_path)
     header = ['id', 'label']
     with codecs.open(in_path, 'r', encoding='utf-8') as in_file,\
             codecs.open(out_path, 'w', encoding='utf-8') as out_file:
@@ -116,11 +117,10 @@ def normalize_tone_file(in_path, out_path):
         out_writer.writerow(header)
         for line in in_file:
             _, normalized_vni_words = process_tone(line)
-            print(normalized_vni_words)
             if 0 < len(normalized_vni_words) < 1000:
                 write_to_test_label(out_writer, normalized_vni_words[0], normalized_vni_words[1:])
 
 
 if __name__ == '__main__':
     remove_tone_file('./data/demo_test.txt', './data/demo_no_tone.txt')
-    normalize_tone_file('./data/demo_test.txt', './data/demo_submission.csv')
+    convert_to_submission_file('./data/demo_test.txt', './data/demo_submission.csv')
