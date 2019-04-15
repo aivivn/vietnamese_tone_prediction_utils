@@ -9,6 +9,48 @@ import csv
 from tqdm import tqdm
 
 
+def remove_tone_file(in_path, out_path):
+    with codecs.open(in_path, 'r', encoding='utf-8') as in_file,\
+            codecs.open(out_path, 'w', encoding='utf-8') as out_file:
+        for line in in_file:
+            no_tone_line = remove_tone_line(line.encode('utf-8'))
+            out_file.write(no_tone_line)
+
+
+def decompose_predicted_test_file(in_path, out_no_tone_path=None, out_simplified_path=None):
+    """
+    Convert a predicted test file to two files:
+        1. a csv file with line_and_word_id and no tone word
+        2. a csv file with line_and_word_id and simplified word
+    :param in_path: path to in put file
+    :return: None, write to files
+    """
+    removed_ext_path = in_path.rsplit('.', 1)[0]
+    if out_no_tone_path is None:
+        out_no_tone_path = removed_ext_path + '_no_tone.csv'
+    if out_simplified_path is None:
+        out_simplified_path = removed_ext_path + '_simplified.csv'
+
+    no_tone_header = ['id', 'no_tone']
+    simplified_header = ['id', 'label']
+    with codecs.open(in_path, 'r', encoding='utf-8') as in_file,\
+            open(out_no_tone_path, 'w') as out_no_tone_file,\
+            open(out_simplified_path, 'w') as out_simplified_file:
+
+        out_no_tone_writer = csv.writer(out_no_tone_file, delimiter=',')
+        out_simplified_writer = csv.writer(out_simplified_file, delimiter=',')
+
+        out_no_tone_writer.writerow(no_tone_header)
+        out_simplified_writer.writerow(simplified_header)
+
+        for line in in_file:
+
+            no_tone_words, simplified_words = process_tone(line)
+            if 0 < len(simplified_words) < 1000:
+                write_to_test_label(out_no_tone_writer, no_tone_words[0], no_tone_words[1:])
+                write_to_test_label(out_simplified_writer, no_tone_words[0], simplified_words[1:])
+
+
 def unicode_to_no_tone_and_normalized_vni(line):
     # TODO: optimize this function
     CODE = 1
@@ -46,6 +88,8 @@ def unicode_to_no_tone_and_normalized_vni(line):
                     else:
                         normalized_vni += tmp
                 i += 5
+            else:
+                print 'something wrong'
         else:
             no_tone += line[i]
             normalized_vni += line[i]
@@ -72,7 +116,7 @@ def remove_tone_line(utf8_str):
 def _remove_special_chars_and_numbers(unicode_line):
     removed_special_chars = re.sub('[^a-zA-Z\d\\\\]', ' ', repr(unicode_line))[1:]
     removed_numbers = re.sub(r'\b\d+\b', '', removed_special_chars)
-    return removed_numbers
+    return removed_numbers.strip()
 
 
 def process_tone(unicode_line):
@@ -88,7 +132,7 @@ def process_tone(unicode_line):
     for word in removed_numbers.split()[:-1]:
         no_tone, normalized_vni = unicode_to_no_tone_and_normalized_vni(word)
         no_tone_words.append(no_tone)
-        normalized_vni_words.append(normalized_vni)
+        normalized_vni_words.append(simplify(normalized_vni))
 
     return no_tone_words, normalized_vni_words
 
@@ -104,23 +148,21 @@ def remove_tone_file(in_path, out_path):
             codecs.open(out_path, 'w', encoding='utf-8') as out_file:
         for line in in_file:
             no_tone_line = remove_tone_line(line.encode('utf-8'))
-            out_file.write(no_tone_line)
+            try:
+                out_file.write(no_tone_line)
+            except UnicodeDecodeError:
+                print line
 
 
-def convert_to_submission_file(in_path, out_path):
-    assert out_path.endswith('.csv'), 'out_path needs to be a csv file, got {}'.format(out_path)
-    header = ['id', 'label']
-    with codecs.open(in_path, 'r', encoding='utf-8') as in_file,\
-            codecs.open(out_path, 'w', encoding='utf-8') as out_file:
-
-        out_writer = csv.writer(out_file, delimiter=',')
-        out_writer.writerow(header)
-        for line in in_file:
-            _, normalized_vni_words = process_tone(line)
-            if 0 < len(normalized_vni_words) < 1000:
-                write_to_test_label(out_writer, normalized_vni_words[0], normalized_vni_words[1:])
+def simplify(word):
+    """
+    keep digit only,
+    """
+    removed_char = re.sub('[A-Za-z]', '', word)
+    # print removed_char
+    return int(removed_char) if removed_char != '' else 0
 
 
 if __name__ == '__main__':
     remove_tone_file('./data/demo_test.txt', './data/demo_no_tone.txt')
-    convert_to_submission_file('./data/demo_test.txt', './data/demo_submission.csv')
+    decompose_predicted_test_file('./data/demo_test.txt')
