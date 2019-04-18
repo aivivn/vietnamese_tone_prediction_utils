@@ -16,13 +16,16 @@ def remove_tone_file(in_path, out_path):
             # processed_line = unicodedata.normalize('NFC', line)
             # processed_line = repr(processed_line)[2:-3] + '\n'
             # no_tone_line, _ = unicode_to_no_tone_and_normalized_vni(processed_line)
-            no_tone_line = normalize_tone_line(line.encode('utf-8'))
+            # no_tone_line = normalize_tone_line(line.encode('utf-8'))
+            tmp = process_line(line)
+            print tmp
             try:
+                print ''
                 # out_file.writelines([no_tone_line ])
-                out_file.write(no_tone_line)
-            except UnicodeDecodeError:
+                # out_file.write(no_tone_line)
+            except UnicodeDecodeError, NameError:
                 print line
-    assert count_lines(in_path) == count_lines(out_path)
+    # assert count_lines(in_path) == count_lines(out_path)
 
 
 def decompose_predicted_test_file(in_path, out_no_tone_path=None, out_simplified_path=None):
@@ -127,7 +130,6 @@ def remove_tone_line(utf8_str):
 
     r = re.compile("|".join(INTAB))
     replaces_dict = dict(zip(INTAB, OUTTAB))
-    print utf8_str
 
     return r.sub(lambda m: replaces_dict[m.group(0)], utf8_str)
 
@@ -226,6 +228,54 @@ def count_lines(thefilepath):
     count = 0
     for line in open(thefilepath).xreadlines(): count += 1
     return count
+
+
+def process_line(line):
+    """
+    Process a line
+    :param line:
+    :return: no_tone_line, no_tone_words, simplified_words
+    """
+    # utf8_line = normalize_tone_line(line.encode('utf-8'))
+    utf8_line = line.encode('utf-8')
+    utf8_line = utf8_line.strip('\n')
+    no_tone_line_pre = remove_tone_line(utf8_line)
+    normalized_line_pre = normalize_tone_line(utf8_line)
+    no_tone_line_alphanumeric = re.sub('[^a-zA-Z\d]', ' ', repr(no_tone_line_pre))
+    normalized_line_alphanumeric = re.sub('[^a-zA-Z\d]', ' ', repr(normalized_line_pre))
+    no_tone_words = no_tone_line_alphanumeric.split()
+    normalized_words = normalized_line_alphanumeric.split()
+    assert len(no_tone_words) == len(normalized_words)
+    filtered_no_tone_words = []
+    simplified_words = []
+    for i, word in enumerate(no_tone_words):
+        if not word.isalpha():
+            continue
+        filtered_no_tone_words.append(word)
+        simplified_words.append(simplify2(normalized_words[i]))
+    return no_tone_line_pre, filtered_no_tone_words, simplified_words
+
+
+def simplify2(word):
+    """
+    normalize and simplify a vni word:
+    * move tone digit to the end
+    * return only digits
+    * return 0 if there is no digit
+    """
+    if word.isalpha(): return '0'
+    ret = ''
+    tone = ''
+    for letter in word:
+        if '1' <= letter <= '9':
+            if '1' <= letter <='5':
+                assert len(tone) == 0
+                tone = letter
+            else:
+                ret += letter
+    return ret + tone
+
+
 
 if __name__ == '__main__':
     remove_tone_file('./data/demo_test.txt', './data/demo_no_tone.txt')
