@@ -4,10 +4,8 @@
 import re
 import sys
 import codecs
-from codes import CODE_DICT
 import csv
 from tqdm import tqdm
-import unicodedata
 
 def remove_tone_file(in_path, out_path):
     with codecs.open(in_path, 'r', encoding='utf-8') as in_file,\
@@ -57,58 +55,6 @@ def decompose_predicted_test_file(in_path, out_no_tone_path=None, out_simplified
                 write_to_test_label(out_simplified_writer, no_tone_words[0], simplified_words[1:])
 
     assert count_lines(out_simplified_path) == count_lines(out_no_tone_path)
-    # assert count_lines(in_path) == count_lines(out_simplified_path)
-
-
-def unicode_to_no_tone_and_normalized_vni(line):
-    # TODO: optimize this function
-    CODE = 1
-    i = 0
-    normalized_vni = ''
-    no_tone = ''
-    tone = ''
-    while i < len(line):
-        # unicode characters always start with '\u' or '\x'
-        if line[i] == '\\':
-            i += 1
-            if i < len(line)-1 and line[i] == '\\':
-                no_tone += '\\'
-                normalized_vni += '\\'
-                i += 1
-            # if code starts by \x, 2 chars follows
-            elif i < len(line)-1 and line[i] == 'x':
-                if line[i:i+3] in CODE_DICT:
-                    tmp = CODE_DICT[line[i:i+3]][CODE]
-                    no_tone += tmp[0]
-                    if int(tmp[-1]) < 6:
-                        tone = tmp[-1]
-                        normalized_vni += tmp[:-1]
-                    else:
-                        normalized_vni += tmp
-                i += 3
-            # if code starts with \u, 4 chars follows
-            elif i < len(line) - 1 and line[i] == 'u':
-                if line[i:i+5] in CODE_DICT:
-                    tmp = CODE_DICT[line[i:i+5]][CODE]
-                    no_tone += tmp[0]
-                    if int(tmp[-1]) < 6:
-                        tone = tmp[-1]
-                        normalized_vni += tmp[:-1]
-                    else:
-                        normalized_vni += tmp
-                i += 5
-            elif i < len(line) - 1 and line[i] == "'":
-                # normalized_vni += "'"
-                # no_tone += "'"
-                continue
-            else:
-                assert 1 == 0
-        else:
-            no_tone += line[i]
-            normalized_vni += line[i]
-            i += 1
-    normalized_vni += tone
-    return no_tone, normalized_vni
 
 
 def remove_tone_line(utf8_str):
@@ -175,44 +121,11 @@ def _remove_special_chars_and_numbers(unicode_line):
     return removed_numbers#.strip('\\n').strip()
 
 
-def process_tone(unicode_line):
-    """
-    convert a unicode string 'hà nội a5, "Việt Nam"'
-    to two lists:
-    * list of no tone words: ['ha', 'noi', 'a5', 'Viet', 'Nam']
-    * list of normalized vni words: ['ha2', 'no6i5', 'a5', 'Vie6t5', 'Nam']
-    """
-    removed_numbers = _remove_special_chars_and_numbers(unicode_line)
-    no_tone_words = []
-    normalized_vni_words = []
-    for word in removed_numbers.split()[:-1]:
-        no_tone, normalized_vni = unicode_to_no_tone_and_normalized_vni(word)
-        no_tone_words.append(no_tone)
-        normalized_vni_words.append(simplify(normalized_vni))
-
-    return no_tone_words, normalized_vni_words
-
-
 def write_to_test_label(label_writer, line_id, words):
     for i, word in enumerate(words):
         line = ['{}{:03}'.format(line_id, i), word]
         label_writer.writerow(line)
 
-
-# def remove_tone_file(in_path, out_path):
-#     with codecs.open(in_path, 'r', encoding='utf-8') as in_file,\
-#             codecs.open(out_path, 'w', encoding='utf-8') as out_file:
-#         for line in in_file:
-#             no_tone_line = remove_tone_line(line.encode('utf-8'))
-#             out_file.write(no_tone_line)
-
-
-def simplify(word):
-    """
-    keep digit only,
-    """
-    removed_char = re.sub('[A-Za-z]', '', word)
-    return int(removed_char) if removed_char != '' else 0
 
 def count_lines(thefilepath):
     count = 0
@@ -274,4 +187,4 @@ def simplify2(word):
 
 if __name__ == '__main__':
     remove_tone_file('./data/demo_test.txt', './data/demo_no_tone.txt')
-    # decompose_predicted_test_file('./data/demo_test.txt')
+    decompose_predicted_test_file('./data/demo_test.txt')
