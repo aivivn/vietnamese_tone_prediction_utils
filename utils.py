@@ -7,14 +7,22 @@ import codecs
 from codes import CODE_DICT
 import csv
 from tqdm import tqdm
-
+import unicodedata
 
 def remove_tone_file(in_path, out_path):
     with codecs.open(in_path, 'r', encoding='utf-8') as in_file,\
             codecs.open(out_path, 'w', encoding='utf-8') as out_file:
         for line in in_file:
-            no_tone_line = remove_tone_line(line.encode('utf-8'))
-            out_file.write(no_tone_line)
+            # processed_line = unicodedata.normalize('NFC', line)
+            # processed_line = repr(processed_line)[2:-3] + '\n'
+            # no_tone_line, _ = unicode_to_no_tone_and_normalized_vni(processed_line)
+            no_tone_line = normalize_tone_line(line.encode('utf-8'))
+            try:
+                # out_file.writelines([no_tone_line ])
+                out_file.write(no_tone_line)
+            except UnicodeDecodeError:
+                print line
+    assert count_lines(in_path) == count_lines(out_path)
 
 
 def decompose_predicted_test_file(in_path, out_no_tone_path=None, out_simplified_path=None):
@@ -46,12 +54,16 @@ def decompose_predicted_test_file(in_path, out_no_tone_path=None, out_simplified
         for line in in_file:
 
             no_tone_words, simplified_words = process_tone(line)
-            if 0 < len(simplified_words) < 1000:
+            if 3 < len(simplified_words) < 1000:
                 write_to_test_label(out_no_tone_writer, no_tone_words[0], no_tone_words[1:])
                 write_to_test_label(out_simplified_writer, no_tone_words[0], simplified_words[1:])
 
+    assert count_lines(out_simplified_path) == count_lines(out_no_tone_path)
+    # assert count_lines(in_path) == count_lines(out_simplified_path)
+
 
 def unicode_to_no_tone_and_normalized_vni(line):
+    print line
     # TODO: optimize this function
     CODE = 1
     i = 0
@@ -88,7 +100,13 @@ def unicode_to_no_tone_and_normalized_vni(line):
                     else:
                         normalized_vni += tmp
                 i += 5
+            elif i < len(line) - 1 and line[i] == "'":
+                # normalized_vni += "'"
+                # no_tone += "'"
+                continue
             else:
+                assert 1 == 0
+                print line
                 print 'something wrong'
         else:
             no_tone += line[i]
@@ -109,14 +127,59 @@ def remove_tone_line(utf8_str):
 
     r = re.compile("|".join(INTAB))
     replaces_dict = dict(zip(INTAB, OUTTAB))
+    print utf8_str
 
+    return r.sub(lambda m: replaces_dict[m.group(0)], utf8_str)
+
+
+def normalize_tone_line(utf8_str):
+    INTAB_L = "áàảãạâấầẩẫậăắằẳẵặđèéẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ"
+    INTAB_U = "ÁÀẢÃẠÂẤẦẨẪẬĂẮẰẲẴẶĐÈÉẺẼẸÊẾỀỂỄỆÍÌỈĨỊÓÒỎÕỌÔỐỒỔỖỘƠỚỜỞỠỢÚÙỦŨỤƯỨỪỬỮỰÝỲỶỸỴ"
+    INTAB = [ch.encode('utf8') for ch in unicode(INTAB_L + INTAB_U, 'utf8')]
+
+    OUTTAB_L = [
+        "a1", "a2", "a3", "a4", "a5",
+        "a6", "a61", "a62", "a63", "a64", "a65",
+        "a8", "a81", "a82", "a83", "a84", "a85",
+        "d9",
+        "e1", "e2", "e3", "e4", "e5",
+        "e6", "e61", "e62", "e63", "e64", "e65",
+        "i1", "i2", "i3", "i4", "i5",
+        "o1", "o2", "o3", "o4", "o5",
+        "o6", "a61", "o62", "o63", "o64", "o65",
+        "o7", "o71", "o72", "o73", "o74", "o75",
+        "u1", "u2", "u3", "u4", "u5",
+        "u7", "u71", "u72", "u73", "u74", "u75",
+        "y1", "y2", "y3", "y4", "y5",
+    ]
+
+    OUTTAB_U = [
+        "A1", "A2", "A3", "A4", "A5",
+        "A6", "A61", "A62", "A63", "A64", "A65",
+        "A8", "A81", "A82", "A83", "A84", "A85",
+        "D9",
+        "E1", "E2", "E3", "E4", "E5",
+        "E6", "E61", "E62", "E63", "E64", "E65",
+        "I1", "I2", "I3", "I4", "I5",
+        "O1", "O2", "O3", "O4", "O5",
+        "O6", "O61", "O62", "O63", "O64", "O65",
+        "O7", "O71", "O72", "O73", "O74", "O75",
+        "U1", "U2", "U3", "U4", "U5",
+        "U7", "U71", "U72", "U73", "U74", "U75",
+        "Y1", "Y2", "Y3", "Y4", "Y5",
+    ]
+
+    r = re.compile("|".join(INTAB))
+    replaces_dict = dict(zip(INTAB, OUTTAB_L + OUTTAB_U))
+
+    print utf8_str
     return r.sub(lambda m: replaces_dict[m.group(0)], utf8_str)
 
 
 def _remove_special_chars_and_numbers(unicode_line):
     removed_special_chars = re.sub('[^a-zA-Z\d\\\\]', ' ', repr(unicode_line))[1:]
     removed_numbers = re.sub(r'\b\d+\b', '', removed_special_chars)
-    return removed_numbers.strip()
+    return removed_numbers#.strip('\\n').strip()
 
 
 def process_tone(unicode_line):
@@ -143,15 +206,12 @@ def write_to_test_label(label_writer, line_id, words):
         label_writer.writerow(line)
 
 
-def remove_tone_file(in_path, out_path):
-    with codecs.open(in_path, 'r', encoding='utf-8') as in_file,\
-            codecs.open(out_path, 'w', encoding='utf-8') as out_file:
-        for line in in_file:
-            no_tone_line = remove_tone_line(line.encode('utf-8'))
-            try:
-                out_file.write(no_tone_line)
-            except UnicodeDecodeError:
-                print line
+# def remove_tone_file(in_path, out_path):
+#     with codecs.open(in_path, 'r', encoding='utf-8') as in_file,\
+#             codecs.open(out_path, 'w', encoding='utf-8') as out_file:
+#         for line in in_file:
+#             no_tone_line = remove_tone_line(line.encode('utf-8'))
+#             out_file.write(no_tone_line)
 
 
 def simplify(word):
@@ -162,7 +222,11 @@ def simplify(word):
     # print removed_char
     return int(removed_char) if removed_char != '' else 0
 
+def count_lines(thefilepath):
+    count = 0
+    for line in open(thefilepath).xreadlines(): count += 1
+    return count
 
 if __name__ == '__main__':
     remove_tone_file('./data/demo_test.txt', './data/demo_no_tone.txt')
-    decompose_predicted_test_file('./data/demo_test.txt')
+    # decompose_predicted_test_file('./data/demo_test.txt')
