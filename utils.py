@@ -13,17 +13,12 @@ def remove_tone_file(in_path, out_path):
     with codecs.open(in_path, 'r', encoding='utf-8') as in_file,\
             codecs.open(out_path, 'w', encoding='utf-8') as out_file:
         for line in in_file:
-            # processed_line = unicodedata.normalize('NFC', line)
-            # processed_line = repr(processed_line)[2:-3] + '\n'
-            # no_tone_line, _ = unicode_to_no_tone_and_normalized_vni(processed_line)
-            # no_tone_line = normalize_tone_line(line.encode('utf-8'))
-            tmp = process_line(line)
-            print tmp
+            utf8_line = line.encode('utf-8')
+            no_tone_line = remove_tone_line(utf8_line)
             try:
-                print ''
                 # out_file.writelines([no_tone_line ])
-                # out_file.write(no_tone_line)
-            except UnicodeDecodeError, NameError:
+                out_file.write(no_tone_line)
+            except UnicodeDecodeError:
                 print line
     # assert count_lines(in_path) == count_lines(out_path)
 
@@ -56,7 +51,7 @@ def decompose_predicted_test_file(in_path, out_no_tone_path=None, out_simplified
 
         for line in in_file:
 
-            no_tone_words, simplified_words = process_tone(line)
+            no_tone_words, simplified_words = process_line(line)
             if 3 < len(simplified_words) < 1000:
                 write_to_test_label(out_no_tone_writer, no_tone_words[0], no_tone_words[1:])
                 write_to_test_label(out_simplified_writer, no_tone_words[0], simplified_words[1:])
@@ -66,7 +61,6 @@ def decompose_predicted_test_file(in_path, out_no_tone_path=None, out_simplified
 
 
 def unicode_to_no_tone_and_normalized_vni(line):
-    print line
     # TODO: optimize this function
     CODE = 1
     i = 0
@@ -109,8 +103,6 @@ def unicode_to_no_tone_and_normalized_vni(line):
                 continue
             else:
                 assert 1 == 0
-                print line
-                print 'something wrong'
         else:
             no_tone += line[i]
             normalized_vni += line[i]
@@ -174,7 +166,6 @@ def normalize_tone_line(utf8_str):
     r = re.compile("|".join(INTAB))
     replaces_dict = dict(zip(INTAB, OUTTAB_L + OUTTAB_U))
 
-    print utf8_str
     return r.sub(lambda m: replaces_dict[m.group(0)], utf8_str)
 
 
@@ -221,7 +212,6 @@ def simplify(word):
     keep digit only,
     """
     removed_char = re.sub('[A-Za-z]', '', word)
-    # print removed_char
     return int(removed_char) if removed_char != '' else 0
 
 def count_lines(thefilepath):
@@ -251,9 +241,12 @@ def process_line(line):
     for i, word in enumerate(no_tone_words):
         if not word.isalpha():
             continue
+        simplified_word = simplify2(normalized_words[i])
+        if simplified_word == '#':
+            continue
         filtered_no_tone_words.append(word)
-        simplified_words.append(simplify2(normalized_words[i]))
-    return no_tone_line_pre, filtered_no_tone_words, simplified_words
+        simplified_words.append(simplified_word)
+    return filtered_no_tone_words, simplified_words
 
 
 def simplify2(word):
@@ -269,7 +262,9 @@ def simplify2(word):
     for letter in word:
         if '1' <= letter <= '9':
             if '1' <= letter <='5':
-                assert len(tone) == 0
+                # assert len(tone) == 0, '{}, {}'.format(tone, word)
+                if len(tone) > 0:
+                    return '#'  # ignore this word
                 tone = letter
             else:
                 ret += letter
