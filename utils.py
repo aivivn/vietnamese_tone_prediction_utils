@@ -5,7 +5,7 @@ import re
 import sys
 import codecs
 import csv
-from tqdm import tqdm
+
 
 def remove_tone_file(in_path, out_path):
     with codecs.open(in_path, 'r', encoding='utf-8') as in_file,\
@@ -17,8 +17,8 @@ def remove_tone_file(in_path, out_path):
                 # out_file.writelines([no_tone_line ])
                 out_file.write(no_tone_line)
             except UnicodeDecodeError:
+                print 'Line with decode error:'
                 print line
-    # assert count_lines(in_path) == count_lines(out_path)
 
 
 def decompose_predicted_test_file(in_path, out_no_tone_path=None, out_simplified_path=None):
@@ -48,7 +48,6 @@ def decompose_predicted_test_file(in_path, out_no_tone_path=None, out_simplified
         out_simplified_writer.writerow(simplified_header)
 
         for line in in_file:
-
             no_tone_words, simplified_words = process_line(line)
             if 3 < len(simplified_words) < 1000:
                 write_to_test_label(out_no_tone_writer, no_tone_words[0], no_tone_words[1:])
@@ -118,19 +117,13 @@ def normalize_tone_line(utf8_str):
 def _remove_special_chars_and_numbers(unicode_line):
     removed_special_chars = re.sub('[^a-zA-Z\d\\\\]', ' ', repr(unicode_line))[1:]
     removed_numbers = re.sub(r'\b\d+\b', '', removed_special_chars)
-    return removed_numbers#.strip('\\n').strip()
+    return removed_numbers
 
 
 def write_to_test_label(label_writer, line_id, words):
     for i, word in enumerate(words):
         line = ['{}{:03}'.format(line_id, i), word]
         label_writer.writerow(line)
-
-
-def count_lines(thefilepath):
-    count = 0
-    for line in open(thefilepath).xreadlines(): count += 1
-    return count
 
 
 def process_line(line):
@@ -142,27 +135,32 @@ def process_line(line):
     # utf8_line = normalize_tone_line(line.encode('utf-8'))
     utf8_line = line.encode('utf-8')
     utf8_line = utf8_line.strip('\n')
+
     no_tone_line_pre = remove_tone_line(utf8_line)
     normalized_line_pre = normalize_tone_line(utf8_line)
+
     no_tone_line_alphanumeric = re.sub('[^a-zA-Z\d]', ' ', repr(no_tone_line_pre))
     normalized_line_alphanumeric = re.sub('[^a-zA-Z\d]', ' ', repr(normalized_line_pre))
+
     no_tone_words = no_tone_line_alphanumeric.split()
     normalized_words = normalized_line_alphanumeric.split()
     assert len(no_tone_words) == len(normalized_words)
+
     filtered_no_tone_words = []
     simplified_words = []
     for i, word in enumerate(no_tone_words):
         if not word.isalpha():
             continue
-        simplified_word = simplify2(normalized_words[i])
+        simplified_word = simplify(normalized_words[i])
         if simplified_word == '#':
             continue
         filtered_no_tone_words.append(word)
         simplified_words.append(simplified_word)
+
     return filtered_no_tone_words, simplified_words
 
 
-def simplify2(word):
+def simplify(word):
     """
     normalize and simplify a vni word:
     * move tone digit to the end
@@ -182,7 +180,6 @@ def simplify2(word):
             else:
                 ret += letter
     return ret + tone
-
 
 
 if __name__ == '__main__':
