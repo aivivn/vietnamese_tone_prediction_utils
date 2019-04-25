@@ -1,8 +1,8 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
-
-import re
+# encoding=utf8
 import sys
+reload(sys)
+sys.setdefaultencoding('utf8')
+import re
 import codecs
 import csv
 
@@ -14,11 +14,10 @@ def remove_tone_file(in_path, out_path):
             utf8_line = line.encode('utf-8')
             no_tone_line = remove_tone_line(utf8_line)
             try:
-                # out_file.writelines([no_tone_line ])
                 out_file.write(no_tone_line)
-            except UnicodeDecodeError:
+            except UnicodeDecodeError as e:
                 print 'Line with decode error:'
-                print line
+                print e
 
 
 def decompose_predicted_test_file(in_path, out_no_tone_path=None, out_simplified_path=None):
@@ -49,7 +48,7 @@ def decompose_predicted_test_file(in_path, out_no_tone_path=None, out_simplified
 
         for line in in_file:
             no_tone_words, simplified_words = process_line(line)
-            if 3 < len(simplified_words) < 1000:
+            if len(simplified_words) < 1000:
                 write_to_test_label(out_no_tone_writer, no_tone_words[0], no_tone_words[1:])
                 write_to_test_label(out_simplified_writer, no_tone_words[0], simplified_words[1:])
 
@@ -180,6 +179,12 @@ def simplify(word):
             else:
                 ret += letter
     return ret + tone
+
+
+def count_lines(thefilepath):
+    count = 0
+    for line in open(thefilepath).xreadlines(): count += 1
+    return count
 
 
 if __name__ == '__main__':
