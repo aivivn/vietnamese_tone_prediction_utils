@@ -1,10 +1,11 @@
 # encoding=utf8
-import sys
-reload(sys)
-sys.setdefaultencoding('utf8')
-import re
 import codecs
 import csv
+import re
+import sys
+
+reload(sys)
+sys.setdefaultencoding('utf8')
 
 
 def remove_tone_file(in_path, out_path):
@@ -56,26 +57,26 @@ def decompose_predicted_test_file(in_path, out_no_tone_path=None, out_simplified
 
 
 def remove_tone_line(utf8_str):
-    INTAB_L = "ạảãàáâậầấẩẫăắằặẳẵóòọõỏôộổỗồốơờớợởỡéèẻẹẽêếềệểễúùụủũưựữửừứíìịỉĩýỳỷỵỹđ"
-    INTAB_U = "ẠẢÃÀÁÂẬẦẤẨẪĂẮẰẶẲẴÓÒỌÕỎÔỘỔỖỒỐƠỜỚỢỞỠÉÈẺẸẼÊẾỀỆỂỄÚÙỤỦŨƯỰỮỬỪỨÍÌỊỈĨÝỲỶỴỸĐ"
-    INTAB = [ch.encode('utf8') for ch in unicode(INTAB_L+INTAB_U, 'utf8')]
+    intab_l = "ạảãàáâậầấẩẫăắằặẳẵóòọõỏôộổỗồốơờớợởỡéèẻẹẽêếềệểễúùụủũưựữửừứíìịỉĩýỳỷỵỹđ"
+    intab_u = "ẠẢÃÀÁÂẬẦẤẨẪĂẮẰẶẲẴÓÒỌÕỎÔỘỔỖỒỐƠỜỚỢỞỠÉÈẺẸẼÊẾỀỆỂỄÚÙỤỦŨƯỰỮỬỪỨÍÌỊỈĨÝỲỶỴỸĐ"
+    intab = [ch.encode('utf8') for ch in unicode(intab_l+intab_u, 'utf8')]
 
-    OUTTAB_L = "a"*17 + "o"*17 + "e"*11 + "u"*11 + "i"*5 + "y"*5 + "d"
-    OUTTAB_U = "A"*17 + "O"*17 + "E"*11 + "U"*11 + "I"*5 + "Y"*5 + "D"
-    OUTTAB = OUTTAB_L + OUTTAB_U
+    outtab_l = "a"*17 + "o"*17 + "e"*11 + "u"*11 + "i"*5 + "y"*5 + "d"
+    outtab_u = "A"*17 + "O"*17 + "E"*11 + "U"*11 + "I"*5 + "Y"*5 + "D"
+    outtab = outtab_l + outtab_u
 
-    r = re.compile("|".join(INTAB))
-    replaces_dict = dict(zip(INTAB, OUTTAB))
+    r = re.compile("|".join(intab))
+    replaces_dict = dict(zip(intab, outtab))
 
     return r.sub(lambda m: replaces_dict[m.group(0)], utf8_str)
 
 
 def normalize_tone_line(utf8_str):
-    INTAB_L = "áàảãạâấầẩẫậăắằẳẵặđèéẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ"
-    INTAB_U = "ÁÀẢÃẠÂẤẦẨẪẬĂẮẰẲẴẶĐÈÉẺẼẸÊẾỀỂỄỆÍÌỈĨỊÓÒỎÕỌÔỐỒỔỖỘƠỚỜỞỠỢÚÙỦŨỤƯỨỪỬỮỰÝỲỶỸỴ"
-    INTAB = [ch.encode('utf8') for ch in unicode(INTAB_L + INTAB_U, 'utf8')]
+    intab_l = "áàảãạâấầẩẫậăắằẳẵặđèéẻẽẹêếềểễệíìỉĩịóòỏõọôốồổỗộơớờởỡợúùủũụưứừửữựýỳỷỹỵ"
+    intab_u = "ÁÀẢÃẠÂẤẦẨẪẬĂẮẰẲẴẶĐÈÉẺẼẸÊẾỀỂỄỆÍÌỈĨỊÓÒỎÕỌÔỐỒỔỖỘƠỚỜỞỠỢÚÙỦŨỤƯỨỪỬỮỰÝỲỶỸỴ"
+    intab = [ch.encode('utf8') for ch in unicode(intab_l + intab_u, 'utf8')]
 
-    OUTTAB_L = [
+    outtab_l = [
         "a1", "a2", "a3", "a4", "a5",
         "a6", "a61", "a62", "a63", "a64", "a65",
         "a8", "a81", "a82", "a83", "a84", "a85",
@@ -91,7 +92,7 @@ def normalize_tone_line(utf8_str):
         "y1", "y2", "y3", "y4", "y5",
     ]
 
-    OUTTAB_U = [
+    outtab_u = [
         "A1", "A2", "A3", "A4", "A5",
         "A6", "A61", "A62", "A63", "A64", "A65",
         "A8", "A81", "A82", "A83", "A84", "A85",
@@ -107,8 +108,8 @@ def normalize_tone_line(utf8_str):
         "Y1", "Y2", "Y3", "Y4", "Y5",
     ]
 
-    r = re.compile("|".join(INTAB))
-    replaces_dict = dict(zip(INTAB, OUTTAB_L + OUTTAB_U))
+    r = re.compile("|".join(intab))
+    replaces_dict = dict(zip(intab, outtab_l + outtab_u))
 
     return r.sub(lambda m: replaces_dict[m.group(0)], utf8_str)
 
@@ -131,7 +132,6 @@ def process_line(line):
     :param line:
     :return: no_tone_line, no_tone_words, simplified_words
     """
-    # utf8_line = normalize_tone_line(line.encode('utf-8'))
     utf8_line = line.encode('utf-8')
     utf8_line = utf8_line.strip('\n')
 
@@ -166,14 +166,15 @@ def simplify(word):
     * return only digits
     * return 0 if there is no digit
     """
-    if word.isalpha(): return '0'
+    if word.isalpha(): 
+        return '0'
     ret = ''
     tone = ''
     for letter in word:
         if '1' <= letter <= '9':
-            if '1' <= letter <='5':
+            if '1' <= letter <= '5':
                 # assert len(tone) == 0, '{}, {}'.format(tone, word)
-                if len(tone) > 0:
+                if tone != '':
                     return '#'  # ignore this word
                 tone = letter
             else:
@@ -183,9 +184,29 @@ def simplify(word):
 
 def count_lines(thefilepath):
     count = 0
-    for line in open(thefilepath).xreadlines(): count += 1
+    for _ in open(thefilepath).xreadlines():
+        count += 1
     return count
 
+
+def get_ids(file_path):
+    ids = set()
+    with codecs.open(file_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            ids.add(line[:3])
+
+
+def compare_ids(file1, file2):
+    """
+    compare ids between two files
+    """
+    ids1 = get_ids(file1)
+    ids2 = get_ids(file2)
+
+    print 'ids in {} but not in {}:'.format(file1, file2)
+    print ids1 - ids2
+    print 'ids in {} but not in {}:'.format(file2, file1)
+    print ids2 - ids1
 
 if __name__ == '__main__':
     remove_tone_file('./data/demo_test.txt', './data/demo_no_tone.txt')

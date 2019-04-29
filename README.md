@@ -1,4 +1,4 @@
-Các hàm hỗ trợ cho cuộc thi [Thêm dấu tiếng Việt].
+Các hàm hỗ trợ cho cuộc thi [Thêm dấu tiếng Việt](https://www.aivivn.com/contests/3).
 
 ## Cách mã hóa tiếng Việt có dấu
 Để đồng nhất việc đánh giá kết quả, các từ tiếng Việt được mã hóa dưới dạng VNI chuẩn hóa. Cụ thể:
@@ -67,7 +67,6 @@ Trong đó dòng đầu tiên là tiêu đề của file, bắt buộc phải l�
 Để thuận tiện cho việc đối chiếu kết quả, file `test_word_per_line.txt` bao gồm các chữ đã được bỏ dấu tương ứng.
 
 ## Các hàm phụ trợ
-Các hàm phụ trợ cho cuộc thi được cho tại [Github repo này](https://github.com/aivivn/vietnamese_tone_prediction)
 
 Hàm `remove_ton_file(in_path, out_path)` giúp bỏ dấu của một file tiếng Việt.
 
